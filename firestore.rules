@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.email == 'knososarmagedoneli@gmail.com' && request.auth.token.email_verified == true);
+    }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // User profile rules
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email']) &&
+               data.uid == request.auth.uid &&
+               data.email is string &&
+               data.email.size() <= 100;
+      }
+      allow read: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming());
+      allow update: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'photoURL']);
+    }
+
+    // Shelters - Publicly readable
+    match /shelters/{shelterId} {
+      function isValidShelter(data) {
+        return data.keys().hasAll(['name', 'address', 'latitude', 'longitude']) &&
+               data.name is string && data.name.size() <= 100 &&
+               data.address is string && data.address.size() <= 200 &&
+               data.latitude is number &&
+               data.longitude is number &&
+               (!data.keys().contains('imageUrl') || (data.imageUrl is string && data.imageUrl.size() <= 500));
+      }
+      allow read: if isValidId(shelterId);
+      allow create: if isSignedIn() && isValidShelter(incoming());
+      allow update: if isAdmin() && isValidShelter(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Stories rules
+    match /stories/{storyId} {
+      function isValidStory(data) {
+        return data.keys().hasAll(['userId', 'dogName', 'storyText', 'imageUrl']) &&
+               data.userId == request.auth.uid &&
+               data.dogName is string && data.dogName.size() <= 100 &&
+               data.storyText is string && data.storyText.size() <= 2000 &&
+               data.imageUrl is string && data.imageUrl.size() <= 500;
+      }
+      allow read: if isValidId(storyId);
+      allow create: if isSignedIn() && isValidStory(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(storyId) && (isOwner(existing().userId) || isAdmin()) && isValidStory(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['dogName', 'storyText', 'imageUrl']);
+      allow delete: if isValidId(storyId) && (isOwner(existing().userId) || isAdmin());
+    }
+
+    // Messages rules
+    match /messages/{messageId} {
+      function isValidMessage(data) {
+        return data.keys().hasAll(['senderId', 'shelterId', 'message']) &&
+               data.senderId == request.auth.uid &&
+               data.message is string && data.message.size() <= 1000;
+      }
+      allow create: if isSignedIn() && isValidMessage(incoming()) && incoming().createdAt == request.time;
+      allow read: if isSignedIn() && (resource.data.senderId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Appointments rules
+    match /appointments/{appointmentId} {
+      function isValidAppointment(data) {
+        return data.keys().hasAll(['userId', 'shelterId', 'date', 'status']) &&
+               data.userId == request.auth.uid &&
+               data.shelterId is string &&
+               data.date is string &&
+               data.status in ['pending', 'confirmed', 'cancelled'];
+      }
+      allow read: if isValidId(appointmentId) && isSignedIn() && (resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidAppointment(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(appointmentId) && isSignedIn() && (existing().userId == request.auth.uid) && isValidAppointment(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['date', 'status', 'notes']);
+      allow delete: if isValidId(appointmentId) && isSignedIn() && (existing().userId == request.auth.uid);
+    }
+  }
+}

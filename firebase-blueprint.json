@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "shelter": {
+      "title": "Shelter",
+      "description": "A pet shelter that has dogs for adoption",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["name", "address", "latitude", "longitude"]
+    },
+    "appointment": {
+      "title": "Appointment",
+      "description": "An appointment to visit a shelter or meet a dog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "shelterId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "shelterId", "date", "status"]
+    },
+    "user": {
+      "title": "User",
+      "description": "Application user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "story": {
+      "title": "Success Story",
+      "description": "Story shared by user about their adopted dog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "dogName": { "type": "string" },
+        "storyText": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "dogName", "storyText", "imageUrl"]
+    },
+    "message": {
+      "title": "Contact Message",
+      "description": "Message sent from user to shelter",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderEmail": { "type": "string" },
+        "shelterId": { "type": "string" },
+        "shelterName": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "shelterId", "message"]
+    }
+  },
+  "firestore": {
+    "/shelters/{shelterId}": {
+      "schema": "shelter",
+      "description": "Registered shelters"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "appointment",
+      "description": "Booking appointments"
+    },
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "User profile information"
+    },
+    "/stories/{storyId}": {
+      "schema": "story",
+      "description": "User success stories"
+    },
+    "/messages/{messageId}": {
+      "schema": "message",
+      "description": "Messages sent to shelters"
+    }
+  }
+}
